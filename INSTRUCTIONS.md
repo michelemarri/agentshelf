@@ -35,6 +35,22 @@ When modifying interfaces or their usage:
 
 Why: Writing docs first forces you to think through the API from the user's perspective before coding.
 
+### Changesets
+
+When modifying packages that are published (check for `"private": true` in package.json):
+- Create a changeset file in `.changeset/` with a random filename (e.g., `happy-tiger-123.md`):
+  ```markdown
+  ---
+  "package-name": patch
+  ---
+
+  Short summary of the change from user's perspective
+  ```
+- Bump types: `patch` (bug fixes), `minor` (new features), `major` (breaking changes)
+- Skip changesets for: docs-only changes, test-only changes, internal tooling
+
+Why: Changesets automate versioning and changelog generation, ensuring users know what changed between releases.
+
 ## Plans
 
 Store in `/.plans/` with date prefix (e.g., `2026-01-27-feature-name.md`).
@@ -98,3 +114,10 @@ pnpm lint    # Run 'pnpm fix' to auto-fix
 pnpm build
 pnpm test
 ```
+
+### Checklist
+- [ ] Lint passes
+- [ ] Build succeeds
+- [ ] Tests pass
+- [ ] README updated (if user-facing changes)
+- [ ] Changeset added (if modifying published packages)
