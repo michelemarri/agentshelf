@@ -36,6 +36,10 @@ AI:  [automatically queries local docs]
 
 No copy-pasting. No hallucinations about deprecated APIs. No waiting for cloud lookups.
 
+<p align="center">
+  <img src="./assets/ai-sdk-demo.gif" alt="Context demo" width="600">
+</p>
+
 ---
 
 ## Real-World Use Cases
