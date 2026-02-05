@@ -37,7 +37,7 @@ AI:  [automatically queries local docs]
 No copy-pasting. No hallucinations about deprecated APIs. No waiting for cloud lookups.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/neuledge/context/main/packages/context/assets/ai-sdk-demo.gif" alt="Context demo" width="600">
+  <img src="https://raw.githubusercontent.com/neuledge/context/main/packages/context/assets/ai-sdk-demo.gif" alt="Context demo" width="800">
 </p>
 
 ---
