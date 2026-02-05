@@ -1,5 +1,11 @@
 # @neuledge/context
 
+## 0.2.1
+
+### Patch Changes
+
+- 8153b31: Improve get_docs tool description to better encourage agent usage
+
 ## 0.2.0
 
 ### Minor Changes
