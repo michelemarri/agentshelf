@@ -34,6 +34,7 @@ import {
   sortTagsForSelection,
   type TagInfo,
 } from "./git.js";
+import { printQueryInsight, printSearchAllInsight } from "./insight.js";
 import { buildPackage } from "./package-builder.js";
 import {
   formatSearchAllResult,
@@ -779,6 +780,7 @@ program
 
     try {
       const result = search(db, topic);
+      printQueryInsight(result);
       console.log(formatSearchResult(result));
     } finally {
       db.close();
@@ -801,6 +803,7 @@ program
     }
 
     const result = searchAll(store, topic);
+    printSearchAllInsight(result, packages.length);
     console.log(formatSearchAllResult(result));
   });
 
