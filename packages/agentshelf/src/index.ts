@@ -27,7 +27,7 @@ export type {
   SearchAllSnippet,
   SearchResult,
 } from "./search.js";
-export { searchAll } from "./search.js";
+export { formatSearchAllResult, searchAll } from "./search.js";
 export { ContextServer } from "./server.js";
 export {
   type PackageInfo,

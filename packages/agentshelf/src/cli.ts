@@ -35,7 +35,12 @@ import {
   type TagInfo,
 } from "./git.js";
 import { buildPackage } from "./package-builder.js";
-import { type SearchResult, search } from "./search.js";
+import {
+  formatSearchAllResult,
+  type SearchResult,
+  search,
+  searchAll,
+} from "./search.js";
 import { ContextServer } from "./server.js";
 import { type PackageInfo, PackageStore, readPackageInfo } from "./store.js";
 
@@ -778,6 +783,25 @@ program
     } finally {
       db.close();
     }
+  });
+
+program
+  .command("search-all")
+  .description("Search across ALL installed packages for a topic")
+  .argument("<topic>", "Search query (e.g., 'middleware authentication')")
+  .action((topic: string) => {
+    const store = new PackageStore();
+    loadPackages(store);
+
+    const packages = store.list();
+    if (packages.length === 0) {
+      console.error("Error: No packages installed.");
+      console.error("Run: agentshelf add <package.db>");
+      process.exit(1);
+    }
+
+    const result = searchAll(store, topic);
+    console.log(formatSearchAllResult(result));
   });
 
 // Only parse when run directly (not when imported for testing)

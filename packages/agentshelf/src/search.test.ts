@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { search, searchAll } from "./search.js";
+import { formatSearchAllResult, search, searchAll } from "./search.js";
 import { PackageStore, readPackageInfo } from "./store.js";
 import { createTestDb, insertChunk, rebuildFtsIndex } from "./test-utils.js";
 
@@ -327,6 +327,38 @@ describe("searchAll", () => {
     expect(result.results).toHaveLength(1);
     expect(result.results[0].library).toBe("express@4.21.0");
     expect(result.results[0].title).toContain("Routing");
+  });
+
+  it("formatSearchAllResult returns JSON with results array", () => {
+    addLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/routing.md",
+        docTitle: "Routing",
+        sectionTitle: "Overview",
+        content: "Express routing determines how an application responds.",
+        tokens: 30,
+      },
+    ]);
+
+    const result = searchAll(store, "routing");
+    const formatted = formatSearchAllResult(result);
+    const parsed = JSON.parse(formatted);
+
+    expect(parsed.results).toHaveLength(1);
+    expect(parsed.results[0].library).toBe("express@4.21.0");
+    expect(parsed.results[0].title).toContain("Routing");
+    expect(parsed.results[0].content).toBeTruthy();
+    expect(parsed.results[0].source).toBeTruthy();
+    expect(parsed.results[0].score).toBeTypeOf("number");
+  });
+
+  it("formatSearchAllResult returns message when no results", () => {
+    const result = searchAll(store, "nonexistent-topic-xyz");
+    const formatted = formatSearchAllResult(result);
+    const parsed = JSON.parse(formatted);
+
+    expect(parsed.results).toHaveLength(0);
+    expect(parsed.message).toContain("No documentation found");
   });
 
   it("results are sorted by normalized score descending", () => {

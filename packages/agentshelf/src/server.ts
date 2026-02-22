@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  type SearchAllResult,
+  formatSearchAllResult,
   type SearchResult,
   search,
   searchAll,
@@ -141,18 +141,6 @@ export class ContextServer {
 
 function formatLibraryName(pkg: PackageInfo): string {
   return `${pkg.name}@${pkg.version}`;
-}
-
-function formatSearchAllResult(result: SearchAllResult): string {
-  if (result.results.length === 0) {
-    return JSON.stringify({
-      results: [],
-      message:
-        "No documentation found across any installed package. Try different keywords.",
-    });
-  }
-
-  return JSON.stringify({ results: result.results });
 }
 
 function formatSearchResult(result: SearchResult): string {

@@ -209,6 +209,22 @@ export interface SearchAllResult {
   results: SearchAllSnippet[];
 }
 
+export function formatSearchAllResult(result: SearchAllResult): string {
+  if (result.results.length === 0) {
+    return JSON.stringify(
+      {
+        results: [],
+        message:
+          "No documentation found across any installed package. Try different keywords.",
+      },
+      null,
+      2,
+    );
+  }
+
+  return JSON.stringify({ results: result.results }, null, 2);
+}
+
 interface TaggedChunk extends ChunkMatch {
   library: string;
   normalizedScore: number;
