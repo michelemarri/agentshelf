@@ -875,12 +875,20 @@ program
         return;
       }
 
+      // Deduplicate by repo URL (e.g., @eslint/js and eslint both → github.com/eslint/eslint)
+      const seenUrls = new Set<string>();
+      const deduplicated = resolved.filter((pkg) => {
+        if (seenUrls.has(pkg.repoUrl)) return false;
+        seenUrls.add(pkg.repoUrl);
+        return true;
+      });
+
       console.log(
-        `Resolved ${resolved.length} repositories (${unresolved.length} without repo)`,
+        `Resolved ${deduplicated.length} unique repositories (${unresolved.length} without repo, ${resolved.length - deduplicated.length} duplicates)`,
       );
 
       // Interactive selection
-      let toInstall = resolved;
+      let toInstall = deduplicated;
       if (options.interactive && isInteractive()) {
         const { checkbox } = await import("@inquirer/prompts");
         const selected = await checkbox({
