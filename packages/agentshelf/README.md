@@ -1,14 +1,14 @@
 <p align="center">
-  <h1 align="center">Context</h1>
+  <h1 align="center">AgentShelf</h1>
   <p align="center">
-    <strong>Local-first documentation for AI agents</strong><br/>
-    Give your AI assistant expert knowledge of any library—offline, instant, private.
+    <strong>Put docs on the shelf. Your agent knows where to look.</strong><br/>
+    Local-first library documentation for AI agents—offline, instant, private.
   </p>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@neuledge/context"><img src="https://img.shields.io/npm/v/@neuledge/context.svg" alt="npm version"></a>
-  <a href="https://github.com/neuledge/context/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
+  <a href="https://www.npmjs.com/package/@michelemarri/agentshelf"><img src="https://img.shields.io/npm/v/@michelemarri/agentshelf.svg" alt="npm version"></a>
+  <a href="https://github.com/michelemarri/agentshelf/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-blue.svg" alt="TypeScript"></a>
 </p>
 
@@ -24,7 +24,7 @@ You're building with Next.js 16, and your AI assistant confidently suggests code
 
 ## The Solution
 
-Context connects your AI assistant directly to up-to-date documentation—locally, instantly, and privately.
+AgentShelf connects your AI assistant directly to up-to-date documentation—locally, instantly, and privately.
 
 ```
 You: "How do I create middleware in Next.js 16?"
@@ -37,7 +37,7 @@ AI:  [automatically queries local docs]
 No copy-pasting. No hallucinations about deprecated APIs. No waiting for cloud lookups.
 
 <p align="center">
-  <img src="https://media.githubusercontent.com/media/neuledge/context/main/packages/context/assets/ai-sdk-demo.gif" alt="Context demo" width="800">
+  <img src="https://media.githubusercontent.com/media/michelemarri/agentshelf/main/packages/agentshelf/assets/ai-sdk-demo.gif" alt="AgentShelf demo" width="800">
 </p>
 
 ---
@@ -49,9 +49,9 @@ No copy-pasting. No hallucinations about deprecated APIs. No waiting for cloud l
 Add docs for your entire tech stack. Your AI assistant becomes an expert in the exact versions you're using:
 
 ```bash
-context add https://github.com/vercel/next.js
-context add https://github.com/prisma/prisma
-context add https://github.com/tailwindlabs/tailwindcss
+agentshelf add https://github.com/vercel/next.js
+agentshelf add https://github.com/prisma/prisma
+agentshelf add https://github.com/tailwindlabs/tailwindcss
 ```
 
 Now ask things like:
@@ -65,7 +65,7 @@ Building an internal library? Package your documentation once, share it with you
 
 ```bash
 # Build docs from your repo
-context add https://github.com/your-company/design-system
+agentshelf add https://github.com/your-company/design-system
 
 # Your whole team can now ask:
 # "How do I use the DataTable component?"
@@ -74,34 +74,34 @@ context add https://github.com/your-company/design-system
 
 ### :airplane: "Code on flights and in coffee shops"
 
-Context works 100% offline. Download docs once, query forever—no internet required.
+AgentShelf works 100% offline. Download docs once, query forever—no internet required.
 
 ### :lock: "Keep proprietary code discussions private"
 
-Cloud documentation services see your queries. Context runs entirely on your machine. Your questions about internal APIs stay internal.
+Cloud documentation services see your queries. AgentShelf runs entirely on your machine. Your questions about internal APIs stay internal.
 
 ---
 
-## Why Context Over Cloud Alternatives?
+## Why AgentShelf Over Cloud Alternatives?
 
-| | Context7 | Deepcon | **Context** |
+| | Context7 | Deepcon | **AgentShelf** |
 |---|:---:|:---:|:---:|
 | **Price** | $10/month | $8/month | **Free forever** |
-| **Free tier** | 1,000 req/month ¹ | 100 req/month | **Unlimited** |
+| **Free tier** | 1,000 req/month | 100 req/month | **Unlimited** |
 | **Rate limits** | 60 req/hour | Throttled | **None** |
 | **Latency** | 100-500ms | 100-300ms | **<10ms** |
 | **Works offline** | :x: | :x: | :white_check_mark: |
 | **Privacy** | Queries sent to cloud | Queries sent to cloud | **100% local** |
 | **Private repos** | $15/1M tokens | :x: | **Free** |
-
-<sub>¹ Context7 reduced free tier from ~6,000 to 1,000 requests/month in January 2026</sub>
+| **Cross-library search** | :x: | :x: | :white_check_mark: |
 
 ---
 
 ## :zap: Key Features
 
-- **Single tool** - One MCP tool does everything, no multi-step lookups
-- **Token-aware** - Smart relevance filtering, never overwhelms the context window
+- **Two tools** - `get_docs` for targeted search, `search_all` for cross-library discovery
+- **Cross-library search** - Don't know which library has the answer? `search_all` searches everywhere at once
+- **Token-aware** - Smart relevance filtering with per-library score normalization, never overwhelms the context window
 - **Dynamic schema** - Available libraries shown in tool definition
 - **Offline-first** - Zero network calls during operation
 - **SQLite + FTS5** - Fast full-text search with stemming
@@ -113,37 +113,37 @@ Cloud documentation services see your queries. Context runs entirely on your mac
 ### 1. Install
 
 ```bash
-npm install -g @neuledge/context
+npm install -g @michelemarri/agentshelf
 ```
 
 ### 2. Add documentation
 
 ```bash
 # From any git repository (GitHub, GitLab, Bitbucket, etc.)
-context add https://github.com/vercel/next.js
-context add https://gitlab.com/org/repo
-context add git@github.com:user/repo.git
+agentshelf add https://github.com/vercel/next.js
+agentshelf add https://gitlab.com/org/repo
+agentshelf add git@github.com:user/repo.git
 
 # From a local directory
-context add ./my-project
-context add /path/to/docs
+agentshelf add ./my-project
+agentshelf add /path/to/docs
 
 # From URL (pre-built package)
-context add https://example.com/react@18.db
+agentshelf add https://example.com/react@18.db
 
 # From local file
-context add ./my-package.db
+agentshelf add ./my-package.db
 ```
 
 ### 3. Configure your AI agent
 
-Context works with any MCP-compatible agent. Choose your setup below:
+AgentShelf works with any MCP-compatible agent. Choose your setup below:
 
 <details>
 <summary><strong>Claude Code</strong></summary>
 
 ```bash
-claude mcp add context -- context serve
+claude mcp add agentshelf -- agentshelf serve
 ```
 
 </details>
@@ -159,8 +159,8 @@ Add to your config file:
 ```json
 {
   "mcpServers": {
-    "context": {
-      "command": "context",
+    "agentshelf": {
+      "command": "agentshelf",
       "args": ["serve"]
     }
   }
@@ -179,8 +179,8 @@ Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project-specific):
 ```json
 {
   "mcpServers": {
-    "context": {
-      "command": "context",
+    "agentshelf": {
+      "command": "agentshelf",
       "args": ["serve"]
     }
   }
@@ -201,9 +201,9 @@ Add to `.vscode/mcp.json` in your workspace:
 ```json
 {
   "servers": {
-    "context": {
+    "agentshelf": {
       "type": "stdio",
-      "command": "context",
+      "command": "agentshelf",
       "args": ["serve"]
     }
   }
@@ -223,8 +223,8 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 ```json
 {
   "mcpServers": {
-    "context": {
-      "command": "context",
+    "agentshelf": {
+      "command": "agentshelf",
       "args": ["serve"]
     }
   }
@@ -243,9 +243,9 @@ Add to your Zed settings (`cmd+,` or `ctrl+,`):
 ```json
 {
   "context_servers": {
-    "context": {
+    "agentshelf": {
       "command": {
-        "path": "context",
+        "path": "agentshelf",
         "args": ["serve"]
       }
     }
@@ -264,9 +264,9 @@ Run `goose configure` and select **Command-line Extension**, or add directly to 
 
 ```yaml
 extensions:
-  context:
+  agentshelf:
     type: stdio
-    command: context
+    command: agentshelf
     args:
       - serve
     timeout: 300
@@ -280,13 +280,13 @@ That's it! Now just ask your AI agent:
 
 > "How do I create middleware in Next.js?"
 
-The agent automatically uses the `get_docs` tool when relevant.
+The agent automatically uses the `get_docs` tool for targeted queries and `search_all` when a topic might span multiple libraries.
 
 ---
 
 ## :books: CLI Reference
 
-### `context add <source>`
+### `agentshelf add <source>`
 
 Install a documentation package. The source type is auto-detected.
 
@@ -296,19 +296,19 @@ Works with GitHub, GitLab, Bitbucket, Codeberg, or any git URL:
 
 ```bash
 # HTTPS URLs
-context add https://github.com/vercel/next.js
-context add https://gitlab.com/org/repo
-context add https://bitbucket.org/org/repo
+agentshelf add https://github.com/vercel/next.js
+agentshelf add https://gitlab.com/org/repo
+agentshelf add https://bitbucket.org/org/repo
 
 # Specific tag or branch
-context add https://github.com/vercel/next.js/tree/v16.0.0
+agentshelf add https://github.com/vercel/next.js/tree/v16.0.0
 
 # SSH URLs
-context add git@github.com:user/repo.git
-context add ssh://git@github.com/user/repo.git
+agentshelf add git@github.com:user/repo.git
+agentshelf add ssh://git@github.com/user/repo.git
 
 # Custom options
-context add https://github.com/vercel/next.js --path packages/docs --name nextjs
+agentshelf add https://github.com/vercel/next.js --path packages/docs --name nextjs
 ```
 
 **From local directory:**
@@ -317,13 +317,13 @@ Build a package from documentation in a local folder:
 
 ```bash
 # Auto-detects docs folder (docs/, documentation/, doc/)
-context add ./my-project
+agentshelf add ./my-project
 
 # Specify docs path explicitly
-context add /path/to/repo --path docs
+agentshelf add /path/to/repo --path docs
 
 # Custom package name and version
-context add ./my-lib --name my-library --pkg-version 1.0.0
+agentshelf add ./my-lib --name my-library --pkg-version 1.0.0
 ```
 
 | Option | Description |
@@ -337,22 +337,22 @@ context add ./my-lib --name my-library --pkg-version 1.0.0
 
 ```bash
 # Save to a directory (auto-names as name@version.db)
-context add https://github.com/vercel/next.js --save ./packages/
+agentshelf add https://github.com/vercel/next.js --save ./packages/
 
 # Save to a specific file
-context add ./my-docs --save ./my-package.db
+agentshelf add ./my-docs --save ./my-package.db
 ```
 
 **From URL:**
 
 ```bash
-context add https://cdn.example.com/react@18.db
+agentshelf add https://cdn.example.com/react@18.db
 ```
 
 **From local file:**
 
 ```bash
-context add ./nextjs@15.0.db
+agentshelf add ./nextjs@15.0.db
 ```
 
 **Finding the right documentation repository:**
@@ -361,12 +361,12 @@ Many popular projects keep their documentation in a separate repository from the
 
 ```bash
 # Example: React's docs are in a separate repo
-context add https://github.com/facebook/react
-# ⚠️  Warning: Only 45 sections found...
+agentshelf add https://github.com/facebook/react
+# Warning: Only 45 sections found...
 # The warning includes a Google search link to help find the docs repo
 
 # The actual React docs repository:
-context add https://github.com/reactjs/react.dev
+agentshelf add https://github.com/reactjs/react.dev
 ```
 
 Common patterns for documentation repositories:
@@ -376,12 +376,12 @@ Common patterns for documentation repositories:
 
 When the CLI detects few documentation sections, it will show a Google search link to help you find the correct repository.
 
-### `context list`
+### `agentshelf list`
 
 Show installed packages.
 
 ```bash
-$ context list
+$ agentshelf list
 
 Installed packages:
 
@@ -391,29 +391,29 @@ Installed packages:
 Total: 2 packages (6.3 MB)
 ```
 
-### `context remove <name>`
+### `agentshelf remove <name>`
 
 Remove a package.
 
 ```bash
-context remove nextjs
+agentshelf remove nextjs
 ```
 
-### `context serve`
+### `agentshelf serve`
 
-Start the MCP server (used by Claude Desktop).
+Start the MCP server (used by AI agents).
 
 ```bash
-context serve
+agentshelf serve
 ```
 
-### `context query <library> <topic>`
+### `agentshelf query <library> <topic>`
 
 Query documentation directly from the command line. Useful for testing and debugging.
 
 ```bash
-# Query a package (use name@version format from 'context list')
-context query 'nextjs@16.0' 'middleware authentication'
+# Query a package (use name@version format from 'agentshelf list')
+agentshelf query 'nextjs@16.0' 'middleware authentication'
 
 # Returns the same JSON format as the MCP get_docs tool
 ```
@@ -423,35 +423,44 @@ context query 'nextjs@16.0' 'middleware authentication'
 ## :gear: How It Works
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Your Machine                      │
-│                                                     │
-│  ┌──────────┐     ┌────────────┐     ┌───────────┐ │
-│  │  Claude  │────▶│ MCP Server │────▶│ ~/.context│ │
-│  │          │     │ (get_docs) │     │  /packages│ │
-│  └──────────┘     └────────────┘     └───────────┘ │
-│                          │                         │
-│                          ▼                         │
-│                   ┌────────────┐                   │
-│                   │   SQLite   │                   │
-│                   │   FTS5     │                   │
-│                   └────────────┘                   │
-└─────────────────────────────────────────────────────┘
+                         Your Machine
+ ┌─────────────────────────────────────────────────────┐
+ │                                                     │
+ │  ┌──────────┐     ┌─────────────┐   ┌────────────┐ │
+ │  │    AI    │────▶│  MCP Server │──▶│~/.agentshelf│ │
+ │  │  Agent   │     │             │   │  /packages  │ │
+ │  └──────────┘     │  get_docs   │   └────────────┘ │
+ │                    │  search_all │         │        │
+ │                    └─────────────┘         ▼        │
+ │                                      ┌──────────┐  │
+ │                                      │  SQLite  │  │
+ │                                      │   FTS5   │  │
+ │                                      └──────────┘  │
+ └─────────────────────────────────────────────────────┘
 ```
+
+**Two MCP tools:**
+
+| Tool | Use when... |
+|------|------------|
+| `get_docs` | You know which library to search (e.g., "Next.js middleware") |
+| `search_all` | You don't know which library has the answer, or the topic spans multiple libraries (e.g., "authentication middleware") |
+
+`search_all` normalizes BM25 scores per-library so no single package dominates results.
 
 **When you add a package:**
 
 1. Repository is cloned (for git URLs) or read (for local directories)
 2. Documentation is parsed and split into sections
 3. Sections are indexed with FTS5 full-text search
-4. The package is stored in `~/.context/packages/`
+4. The package is stored in `~/.agentshelf/packages/`
 
-**When Claude queries:**
+**When the agent queries:**
 
 1. FTS5 finds relevant sections by keyword matching
 2. Results are filtered by relevance score
 3. Token budget ensures responses stay concise
-4. Claude receives focused, relevant documentation
+4. The agent receives focused, relevant documentation
 
 ---
 
@@ -460,7 +469,7 @@ context query 'nextjs@16.0' 'middleware authentication'
 Packages are SQLite databases (`.db` files) containing pre-indexed documentation.
 
 ```
-~/.context/packages/
+~/.agentshelf/packages/
 ├── nextjs@16.0.db
 ├── react@18.db
 └── typescript@5.5.db
@@ -484,22 +493,22 @@ Build a package from a git repository or a local directory:
 
 ```bash
 # From a git repository
-context add https://github.com/your-org/your-library
+agentshelf add https://github.com/your-org/your-library
 
 # From a local directory with docs
-context add ./my-project
+agentshelf add ./my-project
 ```
 
-Context auto-detects `docs/`, `documentation/`, or `doc/` folders. Override with `--path` if your docs live elsewhere:
+AgentShelf auto-detects `docs/`, `documentation/`, or `doc/` folders. Override with `--path` if your docs live elsewhere:
 
 ```bash
-context add ./my-project --path content/api-reference
+agentshelf add ./my-project --path content/api-reference
 ```
 
 Customize the package name and version:
 
 ```bash
-context add ./my-project --name my-lib --pkg-version 2.0
+agentshelf add ./my-project --name my-lib --pkg-version 2.0
 ```
 
 ### Step 2: Export the package for sharing
@@ -508,16 +517,16 @@ Use `--save` to write a copy of the `.db` file you can distribute:
 
 ```bash
 # Save to a directory (auto-named as my-lib@2.0.db)
-context add ./my-project --name my-lib --pkg-version 2.0 --save ./packages/
+agentshelf add ./my-project --name my-lib --pkg-version 2.0 --save ./packages/
 
 # Save to a specific file path
-context add ./my-project --save ./my-lib-docs.db
+agentshelf add ./my-project --save ./my-lib-docs.db
 ```
 
-You can also export an already-installed package. The `.db` files live in `~/.context/packages/`—just copy the one you need:
+You can also export an already-installed package. The `.db` files live in `~/.agentshelf/packages/`—just copy the one you need:
 
 ```bash
-cp ~/.context/packages/my-lib@2.0.db ./shared-packages/
+cp ~/.agentshelf/packages/my-lib@2.0.db ./shared-packages/
 ```
 
 ### Step 3: Share with your team
@@ -534,10 +543,10 @@ Teammates install the shared package with a single command:
 
 ```bash
 # From a URL (CDN, GitHub release, internal server, etc.)
-context add https://cdn.example.com/my-lib@2.0.db
+agentshelf add https://cdn.example.com/my-lib@2.0.db
 
 # From a local file (downloaded or checked into a repo)
-context add ./shared-packages/my-lib@2.0.db
+agentshelf add ./shared-packages/my-lib@2.0.db
 ```
 
 No build step needed—pre-built packages install instantly.
@@ -548,13 +557,13 @@ A typical team workflow:
 
 ```bash
 # Maintainer: build and export the package
-context add https://github.com/your-org/design-system \
+agentshelf add https://github.com/your-org/design-system \
   --name design-system --pkg-version 3.1 --save ./packages/
 
 # Maintainer: upload design-system@3.1.db to your team's file host
 
 # Teammate: install from the shared URL
-context add https://internal-cdn.example.com/design-system@3.1.db
+agentshelf add https://internal-cdn.example.com/design-system@3.1.db
 
 # Everyone: query the docs through any MCP-compatible agent
 # "How do I use the DataTable component?"
@@ -580,6 +589,6 @@ pnpm lint
 
 ---
 
-## :page_facing_up: License
+## :sparkles: Based on
 
-[Apache-2.0](LICENSE)
+AgentShelf is a fork of [neuledge/context](https://github.com/neuledge/context) with cross-library search and rebranding. Licensed under [Apache-2.0](LICENSE).
