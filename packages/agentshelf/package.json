@@ -35,7 +35,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "rimraf --glob dist/** && tsc -p tsconfig.build.json",
+    "build": "rimraf --glob dist/** && tsc -p tsconfig.build.json && chmod +x dist/cli.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "npx biome ci --error-on-warnings",
