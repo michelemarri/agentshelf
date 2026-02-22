@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { printQueryInsight, printSearchAllInsight } from "./insight.js";
+import type { InitReport } from "./insight.js";
+import {
+  printInitInsight,
+  printQueryInsight,
+  printSearchAllInsight,
+} from "./insight.js";
 import type { SearchAllResult } from "./search.js";
 
 describe("printSearchAllInsight", () => {
@@ -160,6 +165,59 @@ describe("printQueryInsight", () => {
 
     const output = stderrOutput.join("\n");
     expect(output).toContain("No results in next@15.3.3");
+    expect(output).toContain("Try:");
+  });
+});
+
+describe("printInitInsight", () => {
+  let stderrOutput: string[];
+
+  beforeEach(() => {
+    stderrOutput = [];
+    vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      stderrOutput.push(args.join(" "));
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shows installed packages with sections", () => {
+    const report: InitReport = {
+      scanned: 24,
+      installed: [
+        { name: "next", version: "15.3.3", sections: 1285 },
+        { name: "payload", version: "3.33.0", sections: 749 },
+      ],
+      skippedNoDocs: 18,
+      skippedAlreadyInstalled: 2,
+      skippedNoRepo: 2,
+    };
+
+    printInitInsight(report);
+
+    const output = stderrOutput.join("\n");
+    expect(output).toContain("Scanned: 24 dependencies");
+    expect(output).toContain("Installed: 2 packages");
+    expect(output).toContain("next@15.3.3 — 1285 sections");
+    expect(output).toContain("payload@3.33.0 — 749 sections");
+    expect(output).toContain("Skipped:");
+  });
+
+  it("shows zero installs with suggestion", () => {
+    const report: InitReport = {
+      scanned: 10,
+      installed: [],
+      skippedNoDocs: 8,
+      skippedAlreadyInstalled: 2,
+      skippedNoRepo: 0,
+    };
+
+    printInitInsight(report);
+
+    const output = stderrOutput.join("\n");
+    expect(output).toContain("Installed: 0 packages");
     expect(output).toContain("Try:");
   });
 });

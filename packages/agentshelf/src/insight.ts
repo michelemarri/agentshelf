@@ -104,3 +104,44 @@ export function printQueryInsight(result: QueryResult): void {
   console.error(`  Tokens: ${formatTokens(totalChars)}`);
   console.error(BOTTOM_LINE);
 }
+
+export interface InitReport {
+  scanned: number;
+  installed: Array<{ name: string; version: string; sections: number }>;
+  skippedNoDocs: number;
+  skippedAlreadyInstalled: number;
+  skippedNoRepo: number;
+}
+
+export function printInitInsight(report: InitReport): void {
+  console.error(TOP_LINE.replace("AgentShelf", "AgentShelf init"));
+
+  console.error(
+    `  Scanned: ${report.scanned} ${plural(report.scanned, "dependency", "dependencies")}`,
+  );
+  console.error(
+    `  Installed: ${report.installed.length} ${plural(report.installed.length, "package", "packages")}`,
+  );
+
+  for (const pkg of report.installed) {
+    console.error(`  ● ${pkg.name}@${pkg.version} — ${pkg.sections} sections`);
+  }
+
+  const skippedParts: string[] = [];
+  if (report.skippedNoDocs > 0)
+    skippedParts.push(`${report.skippedNoDocs} no docs`);
+  if (report.skippedAlreadyInstalled > 0)
+    skippedParts.push(`${report.skippedAlreadyInstalled} already installed`);
+  if (report.skippedNoRepo > 0)
+    skippedParts.push(`${report.skippedNoRepo} no repo`);
+
+  if (skippedParts.length > 0) {
+    console.error(`  Skipped: ${skippedParts.join(", ")}`);
+  }
+
+  if (report.installed.length === 0) {
+    console.error("  Try: agentshelf add <github-url> for specific libraries");
+  }
+
+  console.error(BOTTOM_LINE);
+}
