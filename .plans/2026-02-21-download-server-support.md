@@ -7,13 +7,22 @@
 AgentShelf (`@michelemarri/agentshelf`) is an open-source MCP (Model Context Protocol) server that gives AI agents instant access to up-to-date library documentation. It works locally and offline — no cloud calls during operation.
 
 **How it works today:**
-1. A user runs `agentshelf add <git-repo-or-url>` to index documentation from a git repository, local directory, or pre-built `.db` file
-2. The CLI clones the repo, parses markdown/MDX files, chunks them by H2 sections, deduplicates, and stores everything in a SQLite database with FTS5 full-text search
-3. The `.db` file is saved to `~/.agentshelf/packages/`
-4. When an AI agent connects via MCP, it gets a `get_docs` tool that searches installed packages by keyword
-5. Results are relevance-ranked (BM25), token-budgeted (2000 tokens max), and grouped by document
+1. A user runs `agentshelf init` to auto-discover dependencies from `package.json` and install docs, or `agentshelf add <source>` to install individual packages
+2. The CLI resolves npm packages to GitHub repos (via `registry.ts`), clones repos, parses markdown/MDX, chunks by H2 sections, deduplicates, and stores in SQLite with FTS5 full-text search
+3. `.db` files are saved to `~/.agentshelf/packages/`
+4. AI agents connect via MCP and get `get_docs` (single library) and `search_all` (cross-library) tools
+5. Results are relevance-ranked (BM25), token-budgeted (2000 tokens), with per-library score normalization
+6. CLI commands (`query`, `search-all`) print insight boxes on stderr before JSON output
 
-**The problem:** Users must manually find, clone, and build documentation packages. There's no way to discover or download pre-built packages. Every user rebuilds the same docs from scratch.
+**What's already solved:**
+- `agentshelf init` reads `package.json`, resolves repos via npm registry, deduplicates by URL, auto-installs docs for libraries with a `docs/` folder
+- `registry.ts` handles npm → GitHub URL resolution (normalizeRepoUrl, parseNpmRepositoryField, resolveNpmPackages)
+- Cross-library search via `search_all` MCP tool and `search-all` CLI command
+
+**What remains unsolved:**
+- Libraries without `docs/` in their main repo (React, Tailwind, etc.) — need curated definitions
+- Every user rebuilds the same `.db` from scratch — no pre-built packages to download
+- No way for an AI agent to autonomously discover and install missing docs during a conversation
 
 ### What this plan adds
 
@@ -29,8 +38,10 @@ A **community-driven package registry** so pre-built documentation packages can 
 /
 ├── packages/agentshelf/         ← published npm package (@michelemarri/agentshelf)
 │   ├── src/
-│   │   ├── cli.ts              ← CLI: add, list, remove, serve, query
+│   │   ├── cli.ts              ← CLI: init, add, list, remove, serve, query, search-all
 │   │   ├── server.ts           ← MCP server with get_docs + search_all tools
+│   │   ├── registry.ts         ← npm registry resolution (name → repo URL)
+│   │   ├── insight.ts          ← CLI insight boxes (stderr reports)
 │   │   ├── build.ts            ← markdown parsing & chunking
 │   │   ├── package-builder.ts  ← creates SQLite .db from parsed sections
 │   │   ├── search.ts           ← FTS5 search with BM25 scoring + cross-library search
@@ -47,9 +58,12 @@ A **community-driven package registry** so pre-built documentation packages can 
 
 - **Database format:** SQLite with tables `meta` (name, version, description, source_url), `chunks` (doc_path, doc_title, section_title, content, tokens, has_code), and `chunks_fts` (FTS5 virtual table with porter stemming)
 - **Chunking:** Splits on H2 headings, target 800 tokens/chunk, hard limit 1200, deduplicates by MD5 hash
-- **CLI `add` command** already supports: git repos (clone + tag checkout + docs detection), URLs (download .db), local dirs, local files. It accepts `--tag`, `--name`, `--pkg-version`, `--path`, `--lang`, `--save` options
+- **CLI `init` command:** reads `package.json`, resolves npm packages to GitHub repos via `registry.ts`, deduplicates by repo URL, clones + builds each. Skips packages without `docs/` folder or already installed
+- **CLI `add` command:** supports git repos (clone + tag checkout + docs detection), URLs (download .db), local dirs, local files. Accepts `--tag`, `--name`, `--pkg-version`, `--path`, `--lang`, `--save` options
+- **npm resolution (`registry.ts`):** `normalizeRepoUrl()` handles git+https, git://, SSH, .git suffix. `parseNpmRepositoryField()` handles object, string, GitHub shorthand. `resolveNpmPackages()` queries npm registry API
 - **Git tag handling:** `git.ts` has `fetchTagsWithMetadata()`, `parseMonorepoTag()`, `sortTagsForSelection()`, version extraction from tags via semver parsing
 - **Workspace:** pnpm monorepo with turbo. Only `packages/agentshelf/` exists currently
+- **98 tests** across 9 test files, Biome linting with `--error-on-warnings`
 
 ---
 
@@ -77,6 +91,8 @@ A **community-driven package registry** so pre-built documentation packages can 
 │  packages/agentshelf/        ← published package │
 │    src/                        (npm: @michelemarri/
 │      server.ts                  agentshelf)      │
+│      registry.ts               npm resolution ✅ │
+│      insight.ts                CLI reports ✅     │
 │      ...                                         │
 │                                                  │
 │  .agents/registry/           ← AI agent config   │
@@ -86,7 +102,7 @@ A **community-driven package registry** so pre-built documentation packages can 
 │  .github/workflows/                              │
 │    registry-update.yml       ← weekly cron       │
 └──────────────┬───────────────────────────────────┘
-               │ builds .db using `agentshelf add`
+               │ builds .db using agentshelf internals
                │ then publishes to server
                ▼
 ┌──────────────────────────────────────────────────┐
@@ -101,15 +117,15 @@ A **community-driven package registry** so pre-built documentation packages can 
 │  AI Agent (via MCP)                              │
 │  - search_packages(registry, name, version)      │
 │  - download_package(registry, name, version)     │
-│  - get_docs(library, topic)                      │
-│  - search_all(topic)                             │
+│  - get_docs(library, topic)              ✅      │
+│  - search_all(topic)                     ✅      │
 └──────────────────────────────────────────────────┘
 ```
 
 **Key separation:**
 
-- `packages/agentshelf/` — The published npm package. User-facing. Handles MCP serving, local doc building, searching. Unchanged in Stage 1.
-- `packages/registry/` — Private workspace package (never published). Repo infrastructure only. Parses YAML definitions, discovers versions, orchestrates builds by shelling out to `agentshelf add`, publishes to server.
+- `packages/agentshelf/` — The published npm package. User-facing. Handles MCP serving, local doc building, searching, `init` autodiscovery. Already has `registry.ts` for npm resolution (reusable by `packages/registry/`).
+- `packages/registry/` — Private workspace package (never published). Repo infrastructure only. Parses YAML definitions, discovers versions, orchestrates builds using agentshelf internals, publishes to server.
 - `registry/` — Top-level directory with YAML definition files organized by package manager. This is where the community contributes via PRs.
 - `.agents/registry/` — AI agent instructions for researching packages and creating/maintaining definition files.
 
@@ -186,6 +202,8 @@ Note: `turbo.json` needs no changes — it uses task-based config that applies t
 
 Dependencies: `yaml`, `zod` (already in workspace). Dev: `vitest`, `typescript`, `tsx`.
 
+**Reuse from agentshelf:** The version-check module can reuse `normalizeRepoUrl` and npm resolution patterns from `packages/agentshelf/src/registry.ts`. The build module imports `cloneRepository`, `readLocalDocsFiles`, `buildPackage` directly from the workspace dependency.
+
 ### 1.3 Registry Definition Parser (`definition.ts`)
 
 Responsibilities:
@@ -215,6 +233,8 @@ For each definition file:
 - Gives us publish dates (useful for "recent versions only" in CI)
 - Canonical version list (git tags may include non-release tags)
 - Works even when git tag patterns are complex or inconsistent
+
+**Note:** `packages/agentshelf/src/registry.ts` already handles npm API calls (for `init` command). The version-check module can follow the same patterns but queries the full package metadata (all versions) rather than just `/latest`.
 
 ### 1.5 Build from Definition (`build.ts`)
 
@@ -270,9 +290,10 @@ Steps:
 
 ### 1.9 Example Definitions
 
-Starter definitions to validate the format:
+Starter definitions to validate the format — focusing on libraries that `init` cannot auto-discover (docs in separate repos):
 - `registry/npm/nextjs.yaml` — Multiple version ranges, docs in main repo
 - `registry/npm/react.yaml` — Docs in separate repo (reactjs/react.dev)
+- `registry/npm/tailwindcss.yaml` — Docs in separate repo (tailwindlabs/tailwindcss.com)
 
 ### 1.10 AI Agent for Registry Maintenance (`.agents/registry/`)
 
@@ -321,7 +342,7 @@ Add two new tools to the MCP server in `packages/agentshelf/src/server.ts`:
 **`download_package`**
 - Input: `{ registry: string, name: string, version: string, server?: string }`
 - Downloads `.db` from server
-- Installs it (reuses existing `addFromUrl` logic)
+- Installs it (reuses existing `addFromUrl` logic in cli.ts)
 - Updates the `get_docs` tool enum to include the new package
 - Returns success/failure + package info
 
@@ -336,6 +357,22 @@ Document the expected server API so others can implement compatible servers. The
 - `GET /packages/<registry>/<name>/<version>` — Check existence / get metadata
 - `GET /packages/<registry>/<name>/<version>/download` — Download .db file
 - `POST /packages/<registry>/<name>/<version>` — Publish (authenticated)
+
+---
+
+## Relationship with `agentshelf init`
+
+The `init` command and the download server solve complementary problems:
+
+| Scenario | `init` | Download server |
+|----------|--------|----------------|
+| Library has `docs/` in main repo (Next.js, Vite, Vitest) | Handled automatically | Also available (pre-built, faster) |
+| Library has docs in separate repo (React, Tailwind) | Skipped (no `docs/` detected) | Handled via curated YAML definitions |
+| First-time setup for a project | `agentshelf init` scans package.json | `download_package` could fetch pre-built |
+| AI agent needs docs mid-conversation | Not applicable | `search_packages` + `download_package` |
+| Offline/airgapped environment | Works (if repos accessible) | Pre-download `.db` files |
+
+**When the download server exists, `init` could be enhanced** to check the server first (download pre-built `.db` if available, fall back to clone+build). This would make `init` faster and handle the "docs in separate repo" case.
 
 ---
 
@@ -357,11 +394,11 @@ These are handled separately, not in this repository:
 | 1.2 | Create `packages/registry/` private workspace package | pending |
 | 1.3 | Definition parser with Zod schema (`definition.ts`) | pending |
 | 1.4 | Version discovery from registry APIs (`version-check.ts`) | pending |
-| 1.5 | Build-from-definition via `agentshelf add` (`build.ts`) | pending |
+| 1.5 | Build-from-definition via agentshelf internals (`build.ts`) | pending |
 | 1.6 | Publish client (`publish.ts`) | pending |
 | 1.7 | Registry CLI for local testing (`cli.ts`) | pending |
 | 1.8 | GitHub Actions weekly workflow (`registry-update.yml`) | pending |
-| 1.9 | Example definitions: nextjs, react | pending |
+| 1.9 | Example definitions: nextjs, react, tailwindcss | pending |
 | 1.10 | AI agent for registry maintenance (`.agents/registry/`) | pending |
 | 1.11 | Tests for parser, version discovery, build | pending |
 | **Stage 2** | | |
