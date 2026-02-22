@@ -2,14 +2,14 @@
 
 ## Background
 
-### What is Context?
+### What is AgentShelf?
 
-Context (`@neuledge/context`) is an open-source MCP (Model Context Protocol) server that gives AI agents instant access to up-to-date library documentation. It works locally and offline — no cloud calls during operation.
+AgentShelf (`@michelemarri/agentshelf`) is an open-source MCP (Model Context Protocol) server that gives AI agents instant access to up-to-date library documentation. It works locally and offline — no cloud calls during operation.
 
 **How it works today:**
-1. A user runs `context add <git-repo-or-url>` to index documentation from a git repository, local directory, or pre-built `.db` file
+1. A user runs `agentshelf add <git-repo-or-url>` to index documentation from a git repository, local directory, or pre-built `.db` file
 2. The CLI clones the repo, parses markdown/MDX files, chunks them by H2 sections, deduplicates, and stores everything in a SQLite database with FTS5 full-text search
-3. The `.db` file is saved to `~/.context/packages/`
+3. The `.db` file is saved to `~/.agentshelf/packages/`
 4. When an AI agent connects via MCP, it gets a `get_docs` tool that searches installed packages by keyword
 5. Results are relevance-ranked (BM25), token-budgeted (2000 tokens max), and grouped by document
 
@@ -20,24 +20,24 @@ Context (`@neuledge/context`) is an open-source MCP (Model Context Protocol) ser
 A **community-driven package registry** so pre-built documentation packages can be:
 - **Defined** via YAML files in this repository (anyone can submit a PR)
 - **Built automatically** by a weekly CI job
-- **Published** to the Neuledge server (free hosting)
+- **Published** to a server (free hosting)
 - **Discovered and downloaded** by AI agents via new MCP tools
 
 ### Repository structure (current)
 
 ```
 /
-├── packages/context/           ← published npm package (@neuledge/context)
+├── packages/agentshelf/         ← published npm package (@michelemarri/agentshelf)
 │   ├── src/
 │   │   ├── cli.ts              ← CLI: add, list, remove, serve, query
-│   │   ├── server.ts           ← MCP server with get_docs tool
+│   │   ├── server.ts           ← MCP server with get_docs + search_all tools
 │   │   ├── build.ts            ← markdown parsing & chunking
 │   │   ├── package-builder.ts  ← creates SQLite .db from parsed sections
-│   │   ├── search.ts           ← FTS5 search with BM25 scoring
+│   │   ├── search.ts           ← FTS5 search with BM25 scoring + cross-library search
 │   │   ├── store.ts            ← in-memory package registry
 │   │   ├── git.ts              ← git clone, tag parsing, docs detection
 │   │   └── db.ts               ← SQLite schema validation helpers
-│   └── package.json            ← @neuledge/context, published to npm
+│   └── package.json            ← @michelemarri/agentshelf, published to npm
 ├── .github/workflows/ci.yml   ← lint, build, test on push/PR
 ├── pnpm-workspace.yaml         ← workspace: packages/*
 └── package.json                ← root, private monorepo
@@ -49,7 +49,7 @@ A **community-driven package registry** so pre-built documentation packages can 
 - **Chunking:** Splits on H2 headings, target 800 tokens/chunk, hard limit 1200, deduplicates by MD5 hash
 - **CLI `add` command** already supports: git repos (clone + tag checkout + docs detection), URLs (download .db), local dirs, local files. It accepts `--tag`, `--name`, `--pkg-version`, `--path`, `--lang`, `--save` options
 - **Git tag handling:** `git.ts` has `fetchTagsWithMetadata()`, `parseMonorepoTag()`, `sortTagsForSelection()`, version extraction from tags via semver parsing
-- **Workspace:** pnpm monorepo with turbo. Only `packages/context/` exists currently
+- **Workspace:** pnpm monorepo with turbo. Only `packages/agentshelf/` exists currently
 
 ---
 
@@ -74,9 +74,9 @@ A **community-driven package registry** so pre-built documentation packages can 
 │      publish.ts                server upload     │
 │      cli.ts                    local testing     │
 │                                                  │
-│  packages/context/           ← published package │
-│    src/                        (npm: @neuledge/   │
-│      server.ts                  context)         │
+│  packages/agentshelf/        ← published package │
+│    src/                        (npm: @michelemarri/
+│      server.ts                  agentshelf)      │
 │      ...                                         │
 │                                                  │
 │  .agents/registry/           ← AI agent config   │
@@ -86,11 +86,11 @@ A **community-driven package registry** so pre-built documentation packages can 
 │  .github/workflows/                              │
 │    registry-update.yml       ← weekly cron       │
 └──────────────┬───────────────────────────────────┘
-               │ builds .db using `context add`
+               │ builds .db using `agentshelf add`
                │ then publishes to server
                ▼
 ┌──────────────────────────────────────────────────┐
-│  Neuledge Server (external, not this repo)       │
+│  Download Server (external, not this repo)       │
 │  - Stores .db packages                           │
 │  - Search API                                    │
 │  - Download API                                  │
@@ -102,13 +102,14 @@ A **community-driven package registry** so pre-built documentation packages can 
 │  - search_packages(registry, name, version)      │
 │  - download_package(registry, name, version)     │
 │  - get_docs(library, topic)                      │
+│  - search_all(topic)                             │
 └──────────────────────────────────────────────────┘
 ```
 
 **Key separation:**
 
-- `packages/context/` — The published npm package. User-facing. Handles MCP serving, local doc building, searching. Unchanged in Stage 1.
-- `packages/registry/` — Private workspace package (never published). Repo infrastructure only. Parses YAML definitions, discovers versions, orchestrates builds by shelling out to `context add`, publishes to server.
+- `packages/agentshelf/` — The published npm package. User-facing. Handles MCP serving, local doc building, searching. Unchanged in Stage 1.
+- `packages/registry/` — Private workspace package (never published). Repo infrastructure only. Parses YAML definitions, discovers versions, orchestrates builds by shelling out to `agentshelf add`, publishes to server.
 - `registry/` — Top-level directory with YAML definition files organized by package manager. This is where the community contributes via PRs.
 - `.agents/registry/` — AI agent instructions for researching packages and creating/maintaining definition files.
 
@@ -159,7 +160,7 @@ versions:
 - **`tag_pattern`**: A literal string template with a single `{version}` placeholder. To construct a tag: replace `{version}` with the semver string. To extract a version: split on the literal prefix/suffix around `{version}`. No regex — the prefix and suffix are fixed strings. Examples: `"v{version}"` → prefix `v`, no suffix. `"nextjs@{version}"` → prefix `nextjs@`, no suffix.
 - Version ranges use semver comparison. `min_version` inclusive, `max_version` exclusive.
 - `source.type: git` is the only supported type initially. Can later add `url`, `script`, etc.
-- `lang` defaults to `"en"` per existing behavior in `context add`.
+- `lang` defaults to `"en"` per existing behavior in `agentshelf add`.
 - Each version range entry should have **distinct build instructions** (different URL, docs_path, or lang). If two entries have identical source config, merge them into one range.
 
 ### 1.2 Private `packages/registry/` Package
@@ -168,7 +169,7 @@ New workspace package with `"private": true` (already included by `pnpm-workspac
 
 ```
 packages/registry/
-  package.json          # private, depends on @neuledge/context
+  package.json          # private, depends on @michelemarri/agentshelf
   tsconfig.json
   tsconfig.build.json
   src/
@@ -217,14 +218,14 @@ For each definition file:
 
 ### 1.5 Build from Definition (`build.ts`)
 
-Imports build functions directly from `@neuledge/context` (workspace dependency) rather than shelling out to the CLI. This is simpler, avoids needing the binary on PATH, and gives typed access to results.
+Imports build functions directly from `@michelemarri/agentshelf` (workspace dependency) rather than shelling out to the CLI. This is simpler, avoids needing the binary on PATH, and gives typed access to results.
 
 Given a definition + target version:
 1. Find the matching version entry
 2. Compute git tag via `tag_pattern`
-3. Call `cloneRepository(url, tag)` from `@neuledge/context/git`
-4. Call `readLocalDocsFiles(tempDir, { path: docs_path, lang })` from `@neuledge/context/git`
-5. Call `buildPackage(outputPath, files, { name, version, sourceUrl })` from `@neuledge/context/package-builder`
+3. Call `cloneRepository(url, tag)` from `@michelemarri/agentshelf/git`
+4. Call `readLocalDocsFiles(tempDir, { path: docs_path, lang })` from `@michelemarri/agentshelf/git`
+5. Call `buildPackage(outputPath, files, { name, version, sourceUrl })` from `@michelemarri/agentshelf/package-builder`
 6. Clean up temp dir, return path to the built `.db` file
 
 ### 1.6 Publish to Server (`publish.ts`)
@@ -232,7 +233,7 @@ Given a definition + target version:
 Simple HTTP client:
 - Check existence: `GET <base-url>/packages/<registry>/<name>/<version>` → 200 (exists) or 404 (new)
 - Upload: `POST <base-url>/packages/<registry>/<name>/<version>` with `.db` file body, `Authorization: Bearer <key>` header
-- Base URL defaults to `https://context.neuledge.com`, configurable via env var `REGISTRY_SERVER_URL`
+- Base URL configurable via env var `REGISTRY_SERVER_URL`
 
 ### 1.7 Registry CLI (`cli.ts`)
 
@@ -287,19 +288,19 @@ An AI agent definition (markdown) that can:
 
 ## Stage 2: MCP Download Server Integration
 
-_(Lives in `packages/context/` — this IS user-facing)_
+_(Lives in `packages/agentshelf/` — this IS user-facing)_
 
 ### 2.1 Server Configuration
 
-Support multiple download servers. Default is Neuledge.
+Support multiple download servers.
 
-Configuration stored in `~/.context/config.json`:
+Configuration stored in `~/.agentshelf/config.json`:
 ```json
 {
   "servers": [
     {
-      "name": "neuledge",
-      "url": "https://context.neuledge.com",
+      "name": "default",
+      "url": "https://registry.agentshelf.dev",
       "default": true
     }
   ]
@@ -308,7 +309,7 @@ Configuration stored in `~/.context/config.json`:
 
 ### 2.2 MCP Tools
 
-Add two new tools to the MCP server in `packages/context/src/server.ts`:
+Add two new tools to the MCP server in `packages/agentshelf/src/server.ts`:
 
 **`search_packages`**
 - Input: `{ registry: string, name: string, version?: string }`
@@ -330,7 +331,7 @@ Currently `get_docs` is registered once at startup with a fixed library enum. Af
 
 ### 2.4 Server Specification
 
-Document the expected server API so others can implement compatible servers. The base URL is configurable (default: `https://context.neuledge.com`). Endpoints are relative to the base URL:
+Document the expected server API so others can implement compatible servers. The base URL is configurable. Endpoints are relative to the base URL:
 - `GET /search?registry=<r>&name=<n>&version=<v>` — Search packages
 - `GET /packages/<registry>/<name>/<version>` — Check existence / get metadata
 - `GET /packages/<registry>/<name>/<version>/download` — Download .db file
@@ -341,8 +342,8 @@ Document the expected server API so others can implement compatible servers. The
 ## Out of Scope
 
 These are handled separately, not in this repository:
-- Neuledge server implementation (hosting, API, database)
-- Neuledge website updates
+- Download server implementation (hosting, API, database)
+- Website updates
 - Payment / rate limiting infrastructure
 
 ---
@@ -356,7 +357,7 @@ These are handled separately, not in this repository:
 | 1.2 | Create `packages/registry/` private workspace package | pending |
 | 1.3 | Definition parser with Zod schema (`definition.ts`) | pending |
 | 1.4 | Version discovery from registry APIs (`version-check.ts`) | pending |
-| 1.5 | Build-from-definition via `context add` (`build.ts`) | pending |
+| 1.5 | Build-from-definition via `agentshelf add` (`build.ts`) | pending |
 | 1.6 | Publish client (`publish.ts`) | pending |
 | 1.7 | Registry CLI for local testing (`cli.ts`) | pending |
 | 1.8 | GitHub Actions weekly workflow (`registry-update.yml`) | pending |
@@ -364,7 +365,7 @@ These are handled separately, not in this repository:
 | 1.10 | AI agent for registry maintenance (`.agents/registry/`) | pending |
 | 1.11 | Tests for parser, version discovery, build | pending |
 | **Stage 2** | | |
-| 2.1 | Server config management (`~/.context/config.json`) | pending |
+| 2.1 | Server config management (`~/.agentshelf/config.json`) | pending |
 | 2.2 | MCP `search_packages` tool | pending |
 | 2.3 | MCP `download_package` tool | pending |
 | 2.4 | Dynamic `get_docs` tool update after download | pending |

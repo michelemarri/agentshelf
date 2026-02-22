@@ -1,4 +1,13 @@
-# @neuledge/context
+# @michelemarri/agentshelf
+
+## 0.3.0
+
+### Minor Changes
+
+- Rename package from `@neuledge/context` to `@michelemarri/agentshelf`
+- Rename CLI from `context` to `agentshelf`
+- Rename data directory from `~/.context/` to `~/.agentshelf/`
+- Add `search_all` tool for cross-library documentation search with per-library BM25 score normalization
 
 ## 0.2.3
 
