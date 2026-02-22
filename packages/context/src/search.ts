@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { getMetaValue } from "./db.js";
+import type { PackageStore } from "./store.js";
 
 // TODO: Future enhancements for better search quality:
 // - Semantic search: Add local embeddings for meaning-based retrieval
@@ -194,4 +195,102 @@ export function search(db: Database.Database, topic: string): SearchResult {
     version,
     results,
   };
+}
+
+export interface SearchAllSnippet {
+  library: string;
+  title: string;
+  content: string;
+  source: string;
+  score: number;
+}
+
+export interface SearchAllResult {
+  results: SearchAllSnippet[];
+}
+
+interface TaggedChunk extends ChunkMatch {
+  library: string;
+  normalizedScore: number;
+}
+
+function normalizeScores(chunks: ChunkMatch[]): ChunkMatch[] {
+  if (chunks.length === 0) return [];
+
+  const first = chunks[0];
+  if (!first) return [];
+  if (chunks.length === 1) return [{ ...first, score: 1 }];
+
+  const min = Math.min(...chunks.map((c) => c.score));
+  const max = Math.max(...chunks.map((c) => c.score));
+  const range = max - min;
+
+  if (range === 0) {
+    return chunks.map((c) => ({ ...c, score: 1 }));
+  }
+
+  return chunks.map((c) => ({
+    ...c,
+    score: (c.score - min) / range,
+  }));
+}
+
+export function searchAll(store: PackageStore, topic: string): SearchAllResult {
+  const packages = store.list();
+  if (packages.length === 0) return { results: [] };
+
+  // 1. Collect raw matches from each library, normalize per-library
+  const allTagged: TaggedChunk[] = [];
+
+  for (const pkg of packages) {
+    const db = store.openDb(pkg.name);
+    if (!db) continue;
+
+    try {
+      const raw = searchFts(db, topic);
+      const normalized = normalizeScores(raw);
+
+      for (const chunk of normalized) {
+        allTagged.push({
+          ...chunk,
+          library: `${pkg.name}@${pkg.version}`,
+          normalizedScore: chunk.score,
+        });
+      }
+    } finally {
+      db.close();
+    }
+  }
+
+  if (allTagged.length === 0) return { results: [] };
+
+  // 2. Sort by normalized score descending
+  allTagged.sort((a, b) => b.normalizedScore - a.normalizedScore);
+
+  // 3. Filter by relevance on normalized scores
+  // Safe: we checked allTagged.length > 0 above
+  const topChunk = allTagged[0] as TaggedChunk;
+  const topScore = topChunk.normalizedScore;
+  const minScore = topScore * CONFIG.RELEVANCE_DROP;
+  const filtered = allTagged.filter((m) => m.normalizedScore >= minScore);
+
+  // 4. Apply global token budget
+  const budgeted: TaggedChunk[] = [];
+  let totalTokens = 0;
+  for (const match of filtered) {
+    if (totalTokens + match.tokens > CONFIG.MAX_TOKENS) break;
+    budgeted.push(match);
+    totalTokens += match.tokens;
+  }
+
+  // 5. Assemble results
+  const results: SearchAllSnippet[] = budgeted.map((chunk) => ({
+    library: chunk.library,
+    title: `${chunk.docTitle} > ${chunk.sectionTitle}`,
+    content: chunk.content,
+    source: chunk.docPath,
+    score: chunk.normalizedScore,
+  }));
+
+  return { results };
 }

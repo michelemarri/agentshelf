@@ -1,22 +1,29 @@
 {
-  "name": "@neuledge/context",
-  "version": "0.2.3",
-  "mcpName": "io.github.neuledge/context",
-  "description": "Context management for Neuledge packages",
-  "keywords": [],
-  "homepage": "https://neuledge.com",
+  "name": "@michelemarri/agentshelf",
+  "version": "0.3.0",
+  "mcpName": "io.github.michelemarri/agentshelf",
+  "description": "Put docs on the shelf. Your agent knows where to look.",
+  "keywords": [
+    "ai",
+    "agent",
+    "documentation",
+    "mcp",
+    "local-first",
+    "llm"
+  ],
+  "homepage": "https://github.com/michelemarri/agentshelf",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neuledge/context.git"
+    "url": "git+https://github.com/michelemarri/agentshelf.git"
   },
   "bugs": {
-    "url": "https://github.com/neuledge/context/issues"
+    "url": "https://github.com/michelemarri/agentshelf/issues"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
-    "context": "./dist/cli.js"
+    "agentshelf": "./dist/cli.js"
   },
   "exports": {
     ".": "./dist/index.js"
@@ -39,7 +46,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "author": "Neuledge",
+  "author": "Michele Marri",
   "license": "Apache-2.0",
   "dependencies": {
     "@inquirer/prompts": "^8.2.0",

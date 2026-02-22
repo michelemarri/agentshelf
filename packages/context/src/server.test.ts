@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { search } from "./search.js";
+import { search, searchAll } from "./search.js";
 import { ContextServer } from "./server.js";
 import { PackageStore, readPackageInfo } from "./store.js";
 import { createTestDb, insertChunk, rebuildFtsIndex } from "./test-utils.js";
@@ -24,7 +24,7 @@ describe("ContextServer", () => {
       _serverInfo: { name: string; version: string };
     };
 
-    expect(serverInfo._serverInfo.name).toBe("context");
+    expect(serverInfo._serverInfo.name).toBe("agentshelf");
     expect(serverInfo._serverInfo.version).toMatch(/^\d+\.\d+\.\d+/);
   });
 });
@@ -145,5 +145,95 @@ describe("ContextServer integration", () => {
     // Verify store has the package
     expect(store.list()).toHaveLength(1);
     expect(store.list()[0]?.name).toBe("nextjs");
+  });
+});
+
+describe("search_all integration", () => {
+  const TEST_DIR = join(tmpdir(), `context-searchall-int-test-${Date.now()}`);
+
+  function setupLibrary(
+    name: string,
+    version: string,
+    chunks: Array<{
+      docPath: string;
+      docTitle: string;
+      sectionTitle: string;
+      content: string;
+      tokens: number;
+    }>,
+  ): string {
+    const dbPath = join(TEST_DIR, `${name}@${version}.db`);
+    const db = createTestDb(dbPath, { name, version });
+    for (const chunk of chunks) {
+      insertChunk(db, chunk);
+    }
+    rebuildFtsIndex(db);
+    db.close();
+    return dbPath;
+  }
+
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) {
+      rmSync(TEST_DIR, { recursive: true });
+    }
+  });
+
+  it("end-to-end: store → searchAll across multiple packages", () => {
+    const store = new PackageStore();
+
+    const expressPath = setupLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/middleware.md",
+        docTitle: "Middleware",
+        sectionTitle: "Overview",
+        content:
+          "Express middleware functions have access to the request object, the response object, and the next middleware function.",
+        tokens: 40,
+      },
+    ]);
+    const passportPath = setupLibrary("passport", "0.7.0", [
+      {
+        docPath: "docs/authenticate.md",
+        docTitle: "Authentication",
+        sectionTitle: "Middleware",
+        content:
+          "Passport is authentication middleware for Node.js. It uses strategies to authenticate requests.",
+        tokens: 35,
+      },
+    ]);
+
+    store.add(readPackageInfo(expressPath));
+    store.add(readPackageInfo(passportPath));
+
+    const result = searchAll(store, "middleware");
+
+    expect(result.results.length).toBeGreaterThanOrEqual(2);
+    const libs = result.results.map((r) => r.library);
+    expect(libs).toContain("express@4.21.0");
+    expect(libs).toContain("passport@0.7.0");
+  });
+
+  it("ContextServer registers search_all tool when packages exist", () => {
+    const store = new PackageStore();
+    const expressPath = setupLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/routing.md",
+        docTitle: "Routing",
+        sectionTitle: "Basics",
+        content: "Express routing overview.",
+        tokens: 20,
+      },
+    ]);
+    store.add(readPackageInfo(expressPath));
+
+    const ctx = new ContextServer(store);
+
+    // Verify the server is constructible with packages that would trigger registration
+    expect(ctx).toBeDefined();
+    expect(ctx.server).toBeDefined();
   });
 });

@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { search } from "./search.js";
+import { search, searchAll } from "./search.js";
+import { PackageStore, readPackageInfo } from "./store.js";
 import { createTestDb, insertChunk, rebuildFtsIndex } from "./test-utils.js";
 
 const TEST_DIR = join(tmpdir(), `context-search-test-${Date.now()}`);
@@ -135,5 +136,225 @@ describe("search", () => {
     const result = search(db, "getData()");
 
     expect(result.results).toHaveLength(1);
+  });
+});
+
+describe("searchAll", () => {
+  const TEST_DIR = join(tmpdir(), `context-searchall-test-${Date.now()}`);
+  let store: PackageStore;
+
+  function addLibrary(
+    name: string,
+    version: string,
+    chunks: Array<{
+      docPath: string;
+      docTitle: string;
+      sectionTitle: string;
+      content: string;
+      tokens: number;
+    }>,
+  ): void {
+    const dbPath = join(TEST_DIR, `${name}@${version}.db`);
+    const db = createTestDb(dbPath, { name, version });
+    for (const chunk of chunks) {
+      insertChunk(db, chunk);
+    }
+    rebuildFtsIndex(db);
+    db.close();
+    store.add(readPackageInfo(dbPath));
+  }
+
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true });
+    store = new PackageStore();
+  });
+
+  afterEach(() => {
+    if (existsSync(TEST_DIR)) {
+      rmSync(TEST_DIR, { recursive: true });
+    }
+  });
+
+  it("returns results from multiple libraries", () => {
+    addLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/middleware.md",
+        docTitle: "Middleware",
+        sectionTitle: "Overview",
+        content:
+          "Express middleware functions have access to request and response objects.",
+        tokens: 40,
+      },
+    ]);
+    addLibrary("passport", "0.7.0", [
+      {
+        docPath: "docs/authenticate.md",
+        docTitle: "Authentication",
+        sectionTitle: "Middleware",
+        content:
+          "Passport authenticate middleware handles authentication strategies.",
+        tokens: 40,
+      },
+    ]);
+
+    const result = searchAll(store, "middleware");
+
+    expect(result.results.length).toBe(2);
+    const libraries = result.results.map((r) => r.library);
+    expect(libraries).toContain("express@4.21.0");
+    expect(libraries).toContain("passport@0.7.0");
+  });
+
+  it("returns empty results when no libraries are installed", () => {
+    const result = searchAll(store, "middleware");
+
+    expect(result.results).toHaveLength(0);
+  });
+
+  it("returns empty results when no library matches", () => {
+    addLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/routing.md",
+        docTitle: "Routing",
+        sectionTitle: "Basics",
+        content: "Express uses a routing system based on HTTP methods.",
+        tokens: 30,
+      },
+    ]);
+
+    const result = searchAll(store, "graphql federation");
+
+    expect(result.results).toHaveLength(0);
+  });
+
+  it("normalizes scores so one library does not dominate", () => {
+    // Library with many matching chunks (higher raw BM25 scores)
+    addLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/middleware.md",
+        docTitle: "Middleware",
+        sectionTitle: "Overview",
+        content:
+          "Express middleware functions handle middleware processing for middleware chains.",
+        tokens: 40,
+      },
+      {
+        docPath: "docs/middleware-guide.md",
+        docTitle: "Middleware Guide",
+        sectionTitle: "Advanced",
+        content: "Advanced middleware patterns for middleware composition.",
+        tokens: 40,
+      },
+    ]);
+    // Library with one highly relevant chunk
+    addLibrary("koa", "2.15.0", [
+      {
+        docPath: "docs/middleware.md",
+        docTitle: "Middleware",
+        sectionTitle: "Introduction",
+        content: "Koa middleware uses async functions for middleware handling.",
+        tokens: 40,
+      },
+    ]);
+
+    const result = searchAll(store, "middleware");
+
+    // Both libraries should be represented in results
+    const libraries = new Set(result.results.map((r) => r.library));
+    expect(libraries.size).toBeGreaterThanOrEqual(2);
+
+    // All scores should be in [0, 1] range
+    for (const r of result.results) {
+      expect(r.score).toBeGreaterThanOrEqual(0);
+      expect(r.score).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("respects global token budget across libraries", () => {
+    // Fill two libraries with large chunks that exceed budget together
+    addLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/middleware.md",
+        docTitle: "Middleware",
+        sectionTitle: "Part 1",
+        content: "Express middleware for handling requests.",
+        tokens: 800,
+      },
+      {
+        docPath: "docs/middleware2.md",
+        docTitle: "Middleware",
+        sectionTitle: "Part 2",
+        content: "More express middleware documentation.",
+        tokens: 800,
+      },
+    ]);
+    addLibrary("passport", "0.7.0", [
+      {
+        docPath: "docs/strategy.md",
+        docTitle: "Strategy",
+        sectionTitle: "Middleware",
+        content: "Passport middleware strategy for authentication.",
+        tokens: 800,
+      },
+      {
+        docPath: "docs/strategy2.md",
+        docTitle: "Strategy",
+        sectionTitle: "Middleware 2",
+        content: "Additional passport middleware configuration.",
+        tokens: 800,
+      },
+    ]);
+
+    const result = searchAll(store, "middleware");
+
+    // Total tokens should not exceed 2000 — at most 2 chunks of 800
+    expect(result.results.length).toBeLessThanOrEqual(2);
+  });
+
+  it("includes library name in each result", () => {
+    addLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/routing.md",
+        docTitle: "Routing",
+        sectionTitle: "Overview",
+        content: "Express routing determines how an application responds.",
+        tokens: 30,
+      },
+    ]);
+
+    const result = searchAll(store, "routing");
+
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].library).toBe("express@4.21.0");
+    expect(result.results[0].title).toContain("Routing");
+  });
+
+  it("results are sorted by normalized score descending", () => {
+    addLibrary("express", "4.21.0", [
+      {
+        docPath: "docs/middleware.md",
+        docTitle: "Middleware",
+        sectionTitle: "Overview",
+        content: "Express middleware functions.",
+        tokens: 30,
+      },
+    ]);
+    addLibrary("koa", "2.15.0", [
+      {
+        docPath: "docs/middleware.md",
+        docTitle: "Middleware",
+        sectionTitle: "Overview",
+        content: "Koa middleware functions.",
+        tokens: 30,
+      },
+    ]);
+
+    const result = searchAll(store, "middleware");
+
+    for (let i = 1; i < result.results.length; i++) {
+      expect(result.results[i].score).toBeLessThanOrEqual(
+        result.results[i - 1].score,
+      );
+    }
   });
 });
