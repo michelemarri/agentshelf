@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -34,8 +35,14 @@ import {
   sortTagsForSelection,
   type TagInfo,
 } from "./git.js";
-import { printQueryInsight, printSearchAllInsight } from "./insight.js";
+import {
+  type InitReport,
+  printInitInsight,
+  printQueryInsight,
+  printSearchAllInsight,
+} from "./insight.js";
 import { buildPackage } from "./package-builder.js";
+import { resolveNpmPackages } from "./registry.js";
 import {
   formatSearchAllResult,
   type SearchResult,
@@ -805,6 +812,160 @@ program
     const result = searchAll(store, topic);
     printSearchAllInsight(result, packages.length);
     console.log(formatSearchAllResult(result));
+  });
+
+program
+  .command("init")
+  .description(
+    "Auto-discover project dependencies and install their documentation",
+  )
+  .option("--interactive", "Select which packages to install")
+  .option("--path <dir>", "Project directory (default: current directory)")
+  .action(async (options: { interactive?: boolean; path?: string }) => {
+    try {
+      const projectDir = resolve(options.path ?? ".");
+      const pkgJsonPath = join(projectDir, "package.json");
+
+      if (!existsSync(pkgJsonPath)) {
+        console.error(
+          `Error: No package.json found in ${projectDir}\nUse --path to specify the project directory.`,
+        );
+        process.exit(1);
+      }
+
+      const pkgJson = JSON.parse(readFileSync(pkgJsonPath, "utf-8"));
+      const allDeps: Record<string, string> = {
+        ...(pkgJson.dependencies ?? {}),
+        ...(pkgJson.devDependencies ?? {}),
+      };
+
+      const depNames = Object.keys(allDeps);
+      if (depNames.length === 0) {
+        console.error("No dependencies found in package.json.");
+        process.exit(1);
+      }
+
+      console.log(`Found ${depNames.length} dependencies in package.json`);
+
+      // Filter already installed
+      const store = new PackageStore();
+      loadPackages(store);
+      const installedNames = new Set(store.list().map((p) => p.name));
+      const skippedAlreadyInstalled = depNames.filter((n) =>
+        installedNames.has(n),
+      ).length;
+      const depsToResolve: Record<string, string> = {};
+      for (const [name, version] of Object.entries(allDeps)) {
+        if (!installedNames.has(name)) {
+          depsToResolve[name] = version;
+        }
+      }
+
+      if (Object.keys(depsToResolve).length === 0) {
+        console.log("All dependencies already installed.");
+        return;
+      }
+
+      // Resolve via npm registry
+      console.log("Resolving repositories from npm registry...");
+      const { resolved, unresolved } = await resolveNpmPackages(depsToResolve);
+
+      if (resolved.length === 0) {
+        console.error("No resolvable repositories found.");
+        return;
+      }
+
+      console.log(
+        `Resolved ${resolved.length} repositories (${unresolved.length} without repo)`,
+      );
+
+      // Interactive selection
+      let toInstall = resolved;
+      if (options.interactive && isInteractive()) {
+        const { checkbox } = await import("@inquirer/prompts");
+        const selected = await checkbox({
+          message: "Select packages to install:",
+          choices: resolved.map((pkg) => ({
+            name: `${pkg.name}@${pkg.version} (${pkg.repoUrl})`,
+            value: pkg,
+            checked: true,
+          })),
+        });
+        toInstall = selected;
+      }
+
+      // Install each package
+      const report: InitReport = {
+        scanned: depNames.length,
+        installed: [],
+        skippedNoDocs: 0,
+        skippedAlreadyInstalled,
+        skippedNoRepo: unresolved.length,
+      };
+
+      for (const pkg of toInstall) {
+        console.log(`\n[${pkg.name}] Cloning ${pkg.repoUrl}...`);
+        try {
+          const { tempDir, cleanup } = cloneRepository(pkg.repoUrl);
+          try {
+            // Detect version from tags
+            const repoName = extractRepoName(pkg.repoUrl);
+            const version = detectVersion(tempDir, repoName);
+
+            // Detect docs folder
+            const docsFolder = detectLocalDocsFolder(tempDir);
+            if (!docsFolder) {
+              console.log(`[${pkg.name}] No docs folder found, skipping`);
+              report.skippedNoDocs++;
+              continue;
+            }
+
+            console.log(`[${pkg.name}] Found docs at /${docsFolder}`);
+
+            // Read markdown files
+            const files = readLocalDocsFiles(tempDir, { path: docsFolder });
+            if (files.length === 0) {
+              console.log(`[${pkg.name}] No markdown files found, skipping`);
+              report.skippedNoDocs++;
+              continue;
+            }
+
+            // Build and install
+            ensureDataDir();
+            const packageName = repoName;
+            const outputPath = join(DATA_DIR, `${packageName}@${version}.db`);
+
+            const result = buildPackage(outputPath, files, {
+              name: packageName,
+              version,
+              sourceUrl: pkg.repoUrl,
+            });
+
+            console.log(
+              `[${pkg.name}] Installed: ${packageName}@${version} (${result.sectionCount} sections)`,
+            );
+            report.installed.push({
+              name: packageName,
+              version,
+              sections: result.sectionCount,
+            });
+          } finally {
+            cleanup();
+          }
+        } catch (err) {
+          console.log(
+            `[${pkg.name}] Failed: ${err instanceof Error ? err.message : err}`,
+          );
+          report.skippedNoDocs++;
+        }
+      }
+
+      // Print report
+      printInitInsight(report);
+    } catch (err) {
+      console.error(`Error: ${err instanceof Error ? err.message : err}`);
+      process.exit(1);
+    }
   });
 
 // Only parse when run directly (not when imported for testing)
