@@ -2,7 +2,12 @@ import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { type SearchResult, search } from "./search.js";
+import {
+  type SearchAllResult,
+  type SearchResult,
+  search,
+  searchAll,
+} from "./search.js";
 import type { PackageInfo, PackageStore } from "./store.js";
 
 const require = createRequire(import.meta.url);
@@ -19,7 +24,7 @@ export class ContextServer {
   constructor(store: PackageStore) {
     this.store = store;
     this.mcp = new McpServer({
-      name: "context",
+      name: "agentshelf",
       version,
     });
   }
@@ -32,6 +37,7 @@ export class ContextServer {
     const packages = this.store.list();
     if (packages.length > 0) {
       this.registerGetDocsTool(packages);
+      this.registerSearchAllTool();
     }
     const transport = new StdioServerTransport();
     await this.mcp.connect(transport);
@@ -63,6 +69,29 @@ export class ContextServer {
       },
       async ({ library, topic }) => {
         return this.handleGetDocs(packages, library, topic);
+      },
+    );
+  }
+
+  private registerSearchAllTool(): void {
+    this.mcp.registerTool(
+      "search_all",
+      {
+        description:
+          "Search across ALL installed documentation packages for a topic. Use when you don't know which library has the answer, or when a topic may span multiple libraries. Returns the most relevant results from any installed package, ranked by relevance.",
+        inputSchema: {
+          topic: z
+            .string()
+            .describe(
+              "What you need help with (e.g., 'middleware authentication', 'error handling')",
+            ),
+        },
+      },
+      async ({ topic }) => {
+        const result = searchAll(this.store, topic);
+        return {
+          content: [{ type: "text", text: formatSearchAllResult(result) }],
+        };
       },
     );
   }
@@ -112,6 +141,18 @@ export class ContextServer {
 
 function formatLibraryName(pkg: PackageInfo): string {
   return `${pkg.name}@${pkg.version}`;
+}
+
+function formatSearchAllResult(result: SearchAllResult): string {
+  if (result.results.length === 0) {
+    return JSON.stringify({
+      results: [],
+      message:
+        "No documentation found across any installed package. Try different keywords.",
+    });
+  }
+
+  return JSON.stringify({ results: result.results });
 }
 
 function formatSearchResult(result: SearchResult): string {

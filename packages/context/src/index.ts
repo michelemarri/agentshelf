@@ -21,7 +21,13 @@ export {
   type PackageBuildOptions,
 } from "./package-builder.js";
 // Types
-export type { DocSnippet, SearchResult } from "./search.js";
+export type {
+  DocSnippet,
+  SearchAllResult,
+  SearchAllSnippet,
+  SearchResult,
+} from "./search.js";
+export { searchAll } from "./search.js";
 export { ContextServer } from "./server.js";
 export {
   type PackageInfo,
