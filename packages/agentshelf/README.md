@@ -282,6 +282,13 @@ That's it! Now just ask your AI agent:
 
 The agent automatically uses the `get_docs` tool for targeted queries and `search_all` when a topic might span multiple libraries.
 
+You can also search from the command line:
+
+```bash
+agentshelf query 'nextjs@16.0' 'middleware'      # single library
+agentshelf search-all 'authentication middleware'  # all libraries
+```
+
 ---
 
 ## :books: CLI Reference
@@ -409,13 +416,25 @@ agentshelf serve
 
 ### `agentshelf query <library> <topic>`
 
-Query documentation directly from the command line. Useful for testing and debugging.
+Query a single package from the command line. Useful for testing and debugging.
 
 ```bash
 # Query a package (use name@version format from 'agentshelf list')
 agentshelf query 'nextjs@16.0' 'middleware authentication'
 
 # Returns the same JSON format as the MCP get_docs tool
+```
+
+### `agentshelf search-all <topic>`
+
+Search across **all** installed packages at once. Results are ranked by relevance with per-library score normalization.
+
+```bash
+# Search everywhere — don't know which library has the answer?
+agentshelf search-all 'authentication middleware'
+
+# Returns results from any matching package, ranked by relevance
+agentshelf search-all 'error handling retry'
 ```
 
 ---
