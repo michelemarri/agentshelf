@@ -46,9 +46,13 @@ No copy-pasting. No hallucinations about deprecated APIs. No waiting for cloud l
 
 ### :muscle: "Make my AI actually useful for the stack I use"
 
-Add docs for your entire tech stack. Your AI assistant becomes an expert in the exact versions you're using:
+Add docs for your entire tech stack in one command. Your AI assistant becomes an expert in the exact versions you're using:
 
 ```bash
+# Auto-discover and install docs for all your dependencies
+agentshelf init
+
+# Or add individual libraries
 agentshelf add https://github.com/vercel/next.js
 agentshelf add https://github.com/prisma/prisma
 agentshelf add https://github.com/tailwindlabs/tailwindcss
@@ -117,6 +121,15 @@ npm install -g @michelemarri/agentshelf
 ```
 
 ### 2. Add documentation
+
+**Auto-discover from your project** (recommended):
+
+```bash
+# Reads package.json, resolves repos via npm, installs docs automatically
+agentshelf init
+```
+
+**Or add individual packages:**
 
 ```bash
 # From any git repository (GitHub, GitLab, Bitbucket, etc.)
@@ -292,6 +305,28 @@ agentshelf search-all 'authentication middleware'  # all libraries
 ---
 
 ## :books: CLI Reference
+
+### `agentshelf init`
+
+Auto-discover project dependencies and install their documentation. Reads `package.json`, resolves GitHub repositories via the npm registry, and installs docs for libraries that have a `docs/` folder.
+
+```bash
+# Auto-install docs for all dependencies in the current project
+agentshelf init
+
+# Specify a different project directory
+agentshelf init --path ./my-project
+
+# Choose which packages to install interactively
+agentshelf init --interactive
+```
+
+| Option | Description |
+|--------|-------------|
+| `--path <dir>` | Project directory (default: current directory) |
+| `--interactive` | Select which packages to install via checkbox |
+
+Libraries without a detectable `docs/` folder are skipped. Packages already installed in AgentShelf are also skipped. Duplicate repos (e.g., `@eslint/js` and `eslint` both pointing to the same GitHub repo) are deduplicated automatically.
 
 ### `agentshelf add <source>`
 
