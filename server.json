@@ -7,6 +7,16 @@
     "source": "github"
   },
   "version": "0.3.0",
+  "tools": [
+    {
+      "name": "get_docs",
+      "description": "Search documentation for a specific installed library by topic. Use when you know which library to query."
+    },
+    {
+      "name": "search_all",
+      "description": "Search across ALL installed documentation packages for a topic. Use when you don't know which library has the answer, or when a topic may span multiple libraries."
+    }
+  ],
   "packages": [
     {
       "registryType": "npm",

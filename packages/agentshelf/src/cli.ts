@@ -703,10 +703,10 @@ program
     const packages = store.list();
     if (packages.length > 0) {
       const names = packages.map((p) => `${p.name}@${p.version}`).join(", ");
-      console.error(`Context MCP Server starting...`);
+      console.error(`AgentShelf MCP Server starting...`);
       console.error(`Loaded ${packages.length} packages: ${names}`);
     } else {
-      console.error("Context MCP Server starting...");
+      console.error("AgentShelf MCP Server starting...");
       console.error("No packages installed. Run: agentshelf add <package.db>");
     }
 
