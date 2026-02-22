@@ -42,7 +42,7 @@ import { type PackageInfo, PackageStore, readPackageInfo } from "./store.js";
 // TODO: Package ecosystem enhancements:
 // - Package registry: GitHub-based registry for discovering community packages
 // - Version management: Track multiple versions, update notifications
-// - Package generation CLI: Dedicated `context build` command for creating packages
+// - Package generation CLI: Dedicated `agentshelf build` command for creating packages
 
 type SourceType = "file" | "url" | "git" | "local-dir";
 
@@ -101,7 +101,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
   await pipeline(nodeStream, fileStream);
 }
 
-const DATA_DIR = join(homedir(), ".context", "packages");
+const DATA_DIR = join(homedir(), ".agentshelf", "packages");
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -189,8 +189,8 @@ function loadPackages(store: PackageStore): void {
 }
 
 const program = new Command()
-  .name("context")
-  .description("Local-first documentation for AI agents")
+  .name("agentshelf")
+  .description("Put docs on the shelf. Your agent knows where to look.")
   .version(version);
 
 /** Install a package from a local file path. */
@@ -643,7 +643,7 @@ program
 
     if (packages.length === 0) {
       console.log("No packages installed.");
-      console.log("Run: context add <package.db>");
+      console.log("Run: agentshelf add <package.db>");
       return;
     }
 
@@ -702,7 +702,7 @@ program
       console.error(`Loaded ${packages.length} packages: ${names}`);
     } else {
       console.error("Context MCP Server starting...");
-      console.error("No packages installed. Run: context add <package.db>");
+      console.error("No packages installed. Run: agentshelf add <package.db>");
     }
 
     const server = new ContextServer(store);
@@ -754,7 +754,7 @@ program
       const available = packages.map(formatLibraryName);
       if (available.length === 0) {
         console.error("Error: No packages installed.");
-        console.error("Run: context add <package.db>");
+        console.error("Run: agentshelf add <package.db>");
       } else {
         console.error(`Error: Package not found: ${library}`);
         const maxShow = 5;
@@ -783,8 +783,8 @@ program
 // Only parse when run directly (not when imported for testing)
 const isRunDirectly =
   process.argv[1]?.endsWith("cli.js") ||
-  process.argv[1]?.endsWith("context") ||
-  process.argv[1]?.includes("bin/context");
+  process.argv[1]?.endsWith("agentshelf") ||
+  process.argv[1]?.includes("bin/agentshelf");
 
 if (isRunDirectly) {
   program.parse();

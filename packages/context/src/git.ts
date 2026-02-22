@@ -4,7 +4,7 @@
 
 // TODO: Future enhancements:
 // - Auto-detect documentation site from README (parse for docs.* or documentation links)
-// - Suggest specific versions when repo has tags (e.g., "context add react --version 18.2.0")
+// - Suggest specific versions when repo has tags (e.g., "agentshelf add react --version 18.2.0")
 
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -175,7 +175,7 @@ export function isGitUrl(source: string): boolean {
  * Clone a git repository to a temporary directory.
  */
 export function cloneRepository(url: string, ref?: string): GitCloneResult {
-  const tempDir = mkdtempSync(join(tmpdir(), "context-git-"));
+  const tempDir = mkdtempSync(join(tmpdir(), "agentshelf-git-"));
 
   try {
     // Clone with depth 1 for efficiency (shallow clone)

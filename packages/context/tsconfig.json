@@ -5,8 +5,8 @@
     "module": "NodeNext",
     "baseUrl": ".",
     "paths": {
-      "@neuledge/context": ["src/index.js"],
-      "@neuledge/context/*": ["src/*"]
+      "@michelemarri/agentshelf": ["src/index.js"],
+      "@michelemarri/agentshelf/*": ["src/*"]
     },
     "noEmit": true
   },
